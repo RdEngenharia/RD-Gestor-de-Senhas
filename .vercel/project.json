@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_nTmI1RWwCfWpqMKTtTVpTeppASIv",
+  "orgId": "team_LyWGGLJ5busnWCO7wp2WK4fA",
+  "projectName": "rd-gestor-de-senhas",
+  "settings": {
+    "createdAt": 1768436694451,
+    "framework": "vite",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}

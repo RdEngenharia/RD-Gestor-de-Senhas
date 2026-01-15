@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.3",
-    "react": "^19.2.3",
-    "dexie": "^4.2.1",
-    "@supabase/supabase-js": "^2.90.1"
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "dexie": "4.0.8",
+    "firebase": "^12.8.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

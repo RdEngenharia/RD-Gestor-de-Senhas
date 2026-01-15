@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { auth } from '../lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../hooks/useSync';
 
@@ -32,25 +33,24 @@ export const CloudSyncModal: React.FC<Props> = ({ onClose, onSyncSuccess }) => {
     setSuccessMsg(null);
     try {
       if (authMode === 'signup') {
-        // Chamada signUp correta v2
-        const { error: sbError } = await supabase.auth.signUp({ 
-          email, 
-          password,
-          options: {
-            emailRedirectTo: window.location.origin
-          }
-        });
-        if (sbError) throw sbError;
-        setSuccessMsg("Conta criada! Verifique seu e-mail para confirmar.");
+        await createUserWithEmailAndPassword(auth, email, password);
+        setSuccessMsg("Conta criada com sucesso no Firebase!");
       } else {
-        // Chamada signInWithPassword correta v2
-        const { error: sbError } = await supabase.auth.signInWithPassword({ email, password });
-        if (sbError) throw sbError;
-        setSuccessMsg("Logado com sucesso!");
+        await signInWithEmailAndPassword(auth, email, password);
+        setSuccessMsg("Logado no Firebase!");
         setTimeout(() => handleAction('download'), 500);
       }
     } catch (err: any) {
-      setError(err.message || "Erro de autenticação.");
+      console.error("Firebase Auth Error:", err.code, err.message);
+      if (err.code === 'auth/operation-not-allowed') {
+        setError("Erro: O cadastro por E-mail está desativado no Console do Firebase. Ative em Authentication > Sign-in Method.");
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError("Este e-mail já está em uso. Tente fazer login.");
+      } else if (err.code === 'auth/weak-password') {
+        setError("A senha deve ter pelo menos 6 caracteres.");
+      } else {
+        setError(err.message || "Erro de autenticação no Firebase.");
+      }
     } finally {
       setLoading(false);
     }
@@ -63,18 +63,18 @@ export const CloudSyncModal: React.FC<Props> = ({ onClose, onSyncSuccess }) => {
     try {
       if (type === 'upload') {
         await uploadBackup();
-        if (!silent) setSuccessMsg("Nuvem atualizada!");
+        if (!silent) setSuccessMsg("Nuvem Firebase atualizada!");
       } else {
         const result = await downloadBackup();
         if (result) {
-          if (!silent) setSuccessMsg("Cofre restaurado!");
+          if (!silent) setSuccessMsg("Cofre restaurado do Firestore!");
           if (onSyncSuccess) onSyncSuccess();
         } else if (!silent) {
-          setSuccessMsg("Nenhum backup encontrado.");
+          setSuccessMsg("Nenhum backup encontrado no Firestore.");
         }
       }
     } catch (err: any) {
-      if (!silent) setError(err.message || "Falha na sincronização.");
+      if (!silent) setError(err.message || "Falha na sincronização Cloud.");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -88,13 +88,13 @@ export const CloudSyncModal: React.FC<Props> = ({ onClose, onSyncSuccess }) => {
         </button>
 
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-black tracking-tight uppercase">Sincronização Nuvem</h2>
+          <h2 className="text-2xl font-black tracking-tight uppercase">Sincronização Firebase</h2>
           <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest font-bold">
-            {supabaseUser ? `ATIVO: ${supabaseUser.email}` : "Backup Zero-Knowledge"}
+            {supabaseUser ? `ATIVO: ${supabaseUser.email}` : "Backup Firestore (AES-256)"}
           </p>
         </div>
 
-        {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-2xl text-xs mb-6 text-center">{error}</div>}
+        {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-2xl text-xs mb-6 text-center whitespace-pre-wrap">{error}</div>}
         {successMsg && <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-4 rounded-2xl text-xs mb-6 text-center">{successMsg}</div>}
 
         {!supabaseUser ? (
@@ -105,12 +105,12 @@ export const CloudSyncModal: React.FC<Props> = ({ onClose, onSyncSuccess }) => {
             </div>
             <input 
               type="email" placeholder="E-mail" required
-              className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-orange-600 transition"
+              className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-orange-600 transition text-white"
               value={email} onChange={e => setEmail(e.target.value)}
             />
             <input 
-              type="password" placeholder="Senha Cloud" required
-              className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-orange-600 transition"
+              type="password" placeholder="Senha Firebase" required
+              className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-orange-600 transition text-white"
               value={password} onChange={e => setPassword(e.target.value)}
             />
             <button 
@@ -118,16 +118,16 @@ export const CloudSyncModal: React.FC<Props> = ({ onClose, onSyncSuccess }) => {
               className="w-full bg-orange-700 hover:bg-orange-600 text-white py-4 rounded-2xl font-black transition flex justify-center items-center gap-2 shadow-xl shadow-orange-950/20"
             >
               {loading && <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
-              {authMode === 'login' ? 'ENTRAR E SINCRONIZAR' : 'CRIAR CONTA CLOUD'}
+              {authMode === 'login' ? 'CONECTAR FIRESTORE' : 'CRIAR CONTA FIREBASE'}
             </button>
           </form>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-3">
-              <button onClick={() => handleAction('upload')} disabled={loading} className="w-full bg-orange-700 hover:bg-orange-600 text-white py-4 rounded-2xl font-black transition">ENVIAR PARA NUVEM</button>
-              <button onClick={() => handleAction('download')} disabled={loading} className="w-full border border-slate-700 text-slate-300 py-4 rounded-2xl font-black transition">BAIXAR DA NUVEM</button>
+              <button onClick={() => handleAction('upload')} disabled={loading} className="w-full bg-orange-700 hover:bg-orange-600 text-white py-4 rounded-2xl font-black transition uppercase tracking-tighter">Backup Manual p/ Firestore</button>
+              <button onClick={() => handleAction('download')} disabled={loading} className="w-full border border-slate-700 text-slate-300 py-4 rounded-2xl font-black transition uppercase tracking-tighter">Restaurar do Firestore</button>
             </div>
-            <button onClick={() => { supabase.auth.signOut(); onClose(); }} className="w-full text-slate-500 text-[10px] font-black hover:text-red-500 transition uppercase tracking-widest mt-4">DESCONECTAR CONTA</button>
+            <button onClick={() => { signOut(auth); onClose(); }} className="w-full text-slate-500 text-[10px] font-black hover:text-red-500 transition uppercase tracking-widest mt-4">Desconectar Firebase</button>
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { auth } from '../lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { 
   deriveKey, 
   hashPassword, 
@@ -12,11 +13,10 @@ import {
 } from '../lib/crypto';
 import { db } from '../lib/db';
 import { UserSession } from '../types';
-import { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   session: UserSession;
-  supabaseUser: Session['user'] | null;
+  supabaseUser: User | null; // Mantendo o nome da variável para evitar quebras em outros arquivos, mas mapeando para Firebase User
   login: (password: string) => Promise<void>;
   signup: (password: string) => Promise<string>;
   recover: (recoveryKey: string) => Promise<void>;
@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isUnlocked: false
   });
   const [tempVaultKey, setTempVaultKey] = useState<CryptoKey | null>(null);
-  const [supabaseUser, setSupabaseUser] = useState<Session['user'] | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isVaultConfigured, setIsVaultConfigured] = useState(false);
   const [isBiometryAvailable, setIsBiometryAvailable] = useState(false);
@@ -58,12 +58,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsBiometryAvailable(available);
       }
 
-      const { data: { session: sbSession } } = await supabase.auth.getSession();
-      setSupabaseUser(sbSession?.user ?? null);
-      if (sbSession?.user) {
-        setSession(prev => ({ ...prev, userId: sbSession.user.id }));
-      }
-      setIsLoading(false);
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setSupabaseUser(user);
+        if (user) {
+          setSession(prev => ({ ...prev, userId: user.uid }));
+        }
+        setIsLoading(false);
+      });
+
+      return () => unsubscribe();
     };
     init();
   }, []);
@@ -204,6 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    auth.signOut();
     setSession({ userId: session.userId, masterKey: null, isUnlocked: false });
     setTempVaultKey(null);
   };
