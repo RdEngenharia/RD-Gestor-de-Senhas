@@ -1,0 +1,6 @@
+
+{
+  "name": "RD Gestor de Senhas",
+  "description": "Gerenciador de senhas de alta segurança com criptografia ponta-a-ponta (Zero-Knowledge) e backups em nuvem.",
+  "requestFramePermissions": []
+}
