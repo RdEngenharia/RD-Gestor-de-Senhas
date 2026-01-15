@@ -1,20 +1,30 @@
-
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Configurações do Firebase usando o padrão NEXT_PUBLIC solicitado
+// Configuração com as chaves inseridas DIRETAMENTE para eliminar erros de conexão
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || process.env.FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || process.env.FIREBASE_APP_ID
+  apiKey: "AIzaSyB5R9PQTRTxZWE8-_nRskmREJfrED3Ye1A",
+  authDomain: "rd-vault-18160.firebaseapp.com",
+  projectId: "rd-vault-18160",
+  storageBucket: "rd-vault-18160.firebasestorage.app",
+  messagingSenderId: "199145904028",
+  appId: "1:199145904028:web:458c9ffdf03151b96a5a59"
 };
 
-// Padrão de inicialização segura para evitar múltiplas instâncias
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// Log de controle para o desenvolvedor
+if (typeof window !== "undefined") {
+    console.log("Conectando ao Firebase: rd-vault-18160");
+}
 
+// Inicialização segura do Firebase
+let app;
+try {
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+} catch (error) {
+    console.error("Erro crítico na inicialização do Firebase:", error);
+}
+
+// Exportação dos serviços para uso no restante do app
 export const auth = getAuth(app);
 export const db_cloud = getFirestore(app);
